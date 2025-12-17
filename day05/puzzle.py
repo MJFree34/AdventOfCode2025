@@ -1,6 +1,3 @@
-from math import comb
-
-
 def parse_input(input):
     ranges_str, ing_ids_str = input.split('\n\n')
     ranges = [[int(x) for x in range.split('-')] for range in ranges_str.splitlines()]
@@ -24,15 +21,21 @@ def combined_ranges(ranges):
     
     return combined
 
-def solve_part1(fresh_ids, ing_ids):
+def solve_part1(combined_ranges, ing_ids):
     tot_fresh_ids = 0
 
     for ing_id in ing_ids:
-        for fr in fresh_ids:
+        for fr in combined_ranges:
             if fr[0] <= ing_id <= fr[1]:
                 tot_fresh_ids += 1
                 break
 
+    return tot_fresh_ids
+
+def solve_part2(combined_ranges):
+    tot_fresh_ids = 0
+    for combined_range in combined_ranges:
+        tot_fresh_ids += combined_range[1] - combined_range[0] + 1
     return tot_fresh_ids
 
 if __name__ == "__main__":
@@ -42,3 +45,5 @@ if __name__ == "__main__":
     combined_ranges = combined_ranges(ranges)
 
     print("Part 1:", solve_part1(combined_ranges, ing_ids))
+
+    print("Part 2:", solve_part2(combined_ranges))
