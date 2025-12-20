@@ -5,9 +5,9 @@ class ProblemType(Enum):
     ADD = "+"
 
 class Problem:
-    def __init__(self, numbers, problem_type):
+    def __init__(self, numbers, type_string):
         self.numbers = numbers
-        self.problem_type = ProblemType(problem_type)
+        self.problem_type = ProblemType(type_string)
 
     def solve(self):
         if self.problem_type == ProblemType.ADD:
@@ -23,7 +23,7 @@ class Problem:
     def __str__(self):
         return f"Problem(numbers={self.numbers}, problem_type={self.problem_type})"
 
-def parse_input(input):
+def parse_input_part1(input):
     number_grid = []
     lines = input.split('\n')
 
@@ -40,7 +40,52 @@ def parse_input(input):
 
     return problems
 
-def solve_part1(input):
+def transform_column(column_numbers):
+    # print(f"Transforming column: {column_numbers}")
+    numbers = []
+    for position in range(len(column_numbers[0])):
+        # print(f"  Position: {position}")
+        power = 1
+        number = 0
+        for column in reversed(column_numbers):
+            # print(f"    Column: {column}, char: '{column[position]}'")
+            if column[position] != ' ':
+                number += int(column[position]) * power
+                power *= 10
+        numbers.append(number)
+    # print(numbers)
+    return numbers
+
+def parse_input_part2(input):
+    lines = input.split('\n')
+    problems = []
+
+    column_start_index = 0
+    type_str = lines[-1][0]
+
+    for i, c in enumerate(lines[-1]):
+        if c in ('*', '+') and i != 0:
+            column = []
+            for line in lines[:-1]:
+                column.append(line[column_start_index:i - 1])
+
+            problem = Problem(transform_column(column), type_str)
+            # print(problem)
+            problems.append(problem)
+
+            column_start_index = i
+            type_str = c
+
+    column = []
+    for line in lines[:-1]:
+        column.append(line[column_start_index:])
+    problem = Problem(transform_column(column), type_str)
+    # print(problem)
+    problems.append(problem)
+
+    return problems
+
+def solve(input):
     results_sum = 0
     for problem in input:
         results_sum += problem.solve()
@@ -48,6 +93,10 @@ def solve_part1(input):
 
 if __name__ == "__main__":
     with open("day06/input.txt", "r") as file:
-        input = parse_input(file.read())
+        input_str = file.read()
+        part1_input = parse_input_part1(input_str)
+        part2_input = parse_input_part2(input_str)
 
-    print("Part 1:", solve_part1(input))
+    print("Part 1:", solve(part1_input))
+
+    print("Part 2:", solve(part2_input))
