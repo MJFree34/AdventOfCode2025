@@ -1,12 +1,15 @@
+from fractions import Fraction
+from itertools import product
+
 class Machine:
     def __init__(self, target_lights, buttons, joltage_reqs):
         self.target_lights = target_lights
         self.buttons = buttons
         self.joltage_reqs = joltage_reqs
 
-# def print_grid(grid):
-#     for row in grid:
-#         print(*row, sep='')
+def print_grid(grid):
+    for row in grid:
+        print(*row, sep='')
 
 def parse_input(input):
     machines = []
@@ -16,7 +19,8 @@ def parse_input(input):
         target_lights = [1 if c == '#' else 0 for c in target_lights_str]
         line = line[line.index(']') + 2:]
 
-        joltage_reqs = line[line.index('{') + 1:-1].split(',')
+        joltage_reqs_str = line[line.index('{') + 1:-1].split(',')
+        joltage_reqs = [int(s) for s in joltage_reqs_str]
         line = line[:line.index('{') - 1]
 
         button_strs = line.split(' ')
@@ -123,8 +127,139 @@ def solve_part1(machines):
 
     return sum_min_button_presses
 
+# Used Gemini to help with this part. Multiple naive solutions were not working.
+def solve_part2(machines):
+    sum_min_button_presses = 0
+
+    for machine in machines:
+        n = len(machine.target_lights)
+        m = len(machine.buttons[0])
+        
+        # Use Fraction for exact precision
+        augmented = []
+        for i in range(n):
+            row = [Fraction(x, 1) for x in machine.buttons[i]]
+            row.append(Fraction(machine.joltage_reqs[i], 1))
+            augmented.append(row)
+
+        pivot_row = 0
+        pivot_cols = []
+        
+        # 1. Gaussian Elimination (Exact)
+        for col in range(m):
+            if pivot_row >= n: break
+
+            pivot_idx = -1
+            for row in range(pivot_row, n):
+                if augmented[row][col] != 0:
+                    pivot_idx = row
+                    break
+            
+            if pivot_idx == -1: continue
+
+            # Swap
+            augmented[pivot_row], augmented[pivot_idx] = augmented[pivot_idx], augmented[pivot_row]
+            pivot_cols.append(col)
+
+            # Normalize
+            pivot_val = augmented[pivot_row][col]
+            for c in range(col, m + 1):
+                augmented[pivot_row][c] /= pivot_val
+
+            # Eliminate
+            for row in range(n):
+                if row != pivot_row and augmented[row][col] != 0:
+                    factor = augmented[row][col]
+                    for c in range(col, m + 1):
+                        augmented[row][c] -= factor * augmented[pivot_row][c]
+            
+            pivot_row += 1
+
+        # 2. Check Consistency
+        possible = True
+        for row in range(pivot_row, n):
+            if augmented[row][m] != 0:
+                possible = False
+                break
+        if not possible:
+            continue # Impossible machine
+
+        # 3. Solve for Free Variables
+        free_vars = [col for col in range(m) if col not in pivot_cols]
+        
+        # If no free variables, just check the single solution
+        if not free_vars:
+            valid = True
+            presses = 0
+            for i, col in enumerate(pivot_cols):
+                val = augmented[i][m]
+                if val < 0 or val.denominator != 1:
+                    valid = False
+                    break
+                presses += int(val)
+            if valid:
+                sum_min_button_presses += presses
+                print(f"Solved determined machine. Presses: {presses}")
+            continue
+        
+        best_total = float('inf')
+        search_limit = 5000 
+        
+        # Optimization: If we have many free vars, reduce range
+        if len(free_vars) > 2: search_limit = 200
+
+        for free_vals in product(range(search_limit), repeat=len(free_vars)):
+            current_free_sum = sum(free_vals)
+            if current_free_sum >= best_total:
+                continue
+
+            solution = [Fraction(0, 1)] * m
+            for i, f_idx in enumerate(free_vars):
+                solution[f_idx] = Fraction(free_vals[i], 1)
+            
+            valid_solution = True
+            current_total = current_free_sum
+            
+            # Back-solve
+            for i in range(len(pivot_cols) - 1, -1, -1):
+                col = pivot_cols[i]
+                row_idx = i
+                
+                # val = Constant - Sum(Coeff * Free)
+                val = augmented[row_idx][m]
+                for f_idx in free_vars:
+                    # Only cols to the right affect this pivot in RREF
+                    if f_idx > col: 
+                        val -= augmented[row_idx][f_idx] * solution[f_idx]
+                
+                # Check Integer and Non-Negative
+                if val < 0 or val.denominator != 1:
+                    valid_solution = False
+                    break
+                
+                solution[col] = val
+                current_total += int(val)
+                
+                # Pruning
+                if current_total >= best_total:
+                    valid_solution = False
+                    break
+            
+            if valid_solution:
+                best_total = current_total
+
+        if best_total != float('inf'):
+            sum_min_button_presses += best_total
+            print(f"Solved machine. Min presses: {best_total}")
+        else:
+            print(f"No integer solution found in range {search_limit}.")
+
+    return sum_min_button_presses
+
 if __name__ == "__main__":
     with open("day10/input.txt", "r") as file:
         machines = parse_input(file.read())
  
     print("Part 1:", solve_part1(machines))
+
+    print("Part 2:", solve_part2(machines))
