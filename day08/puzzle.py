@@ -1,6 +1,7 @@
+import heapq
 import math
 
-NUM_PAIRS = 10
+NUM_PAIRS = 1000
 
 class UnionFind:
     def __init__(self, points):
@@ -28,29 +29,20 @@ def parse_input(input):
     return [tuple(int(x) for x in coord.split(',')) for coord in input.split('\n')]
 
 def solve_part1(coords):
-    distances = [[0 for _ in range(len(coords))] for _ in range(len(coords))]
+    min_heap = []
 
     for i in range(len(coords)):
-        for j in range(len(coords)):
-            if i != j:
-                distances[i][j] = math.dist(coords[i], coords[j])
+        for j in range(i + 1, len(coords)):
+            # Push (distance, index1, index2) to the heap
+            heapq.heappush(min_heap, (math.dist(coords[i], coords[j]), i, j))
 
     uf = UnionFind(range(len(coords)))
 
     for _ in range(NUM_PAIRS):
-        min_distance = distances[0][1]
-        min_distance_indices = (0, 1)
+        dist, i, j = heapq.heappop(min_heap)
 
-        for i in range(len(coords)):
-            for j in range(len(coords)):
-                if i != j:
-                    if distances[i][j] != 0 and distances[i][j] < min_distance:
-                        min_distance = distances[i][j]
-                        min_distance_indices = (i, j)
-        # print(f"Connecting points {coords[min_distance_indices[0]]} and {coords[min_distance_indices[1]]} with distance {min_distance}")
-        distances[min_distance_indices[0]][min_distance_indices[1]] = 0
-        distances[min_distance_indices[1]][min_distance_indices[0]] = 0
-        uf.union(min_distance_indices[0], min_distance_indices[1])
+        # print(f"Connecting points {coords[i]} and {coords[j]} with distance {dist}")
+        uf.union(i, j)
 
     sorted_sizes = sorted(uf.get_all_sizes().values(), reverse=True)
     # print("Sorted sizes:", sorted_sizes)
