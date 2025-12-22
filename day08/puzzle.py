@@ -49,8 +49,32 @@ def solve_part1(coords):
 
     return sorted_sizes[0] * sorted_sizes[1] * sorted_sizes[2]
 
+def solve_part2(coords):
+    min_heap = []
+
+    for i in range(len(coords)):
+        for j in range(i + 1, len(coords)):
+            # Push (distance, index1, index2) to the heap
+            heapq.heappush(min_heap, (math.dist(coords[i], coords[j]), i, j))
+
+    uf = UnionFind(range(len(coords)))
+    iterations = 0
+    last_point_indices = (-1, -1)
+
+    while iterations < NUM_PAIRS or len(uf.get_all_sizes()) > 1:
+        dist, i, j = heapq.heappop(min_heap)
+
+        # print(f"Connecting points {coords[i]} and {coords[j]} with distance {dist}")
+        uf.union(i, j)
+        iterations += 1
+        last_point_indices = (i, j)
+
+    return coords[last_point_indices[0]][0] * coords[last_point_indices[1]][0]
+
 if __name__ == "__main__":
     with open("day08/input.txt", "r") as file:
         input = parse_input(file.read())
  
     print("Part 1:", solve_part1(input))
+
+    print("Part 2:", solve_part2(input))
