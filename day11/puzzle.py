@@ -1,8 +1,11 @@
 from aocd import get_data, submit
 from aocp import ListParser, TupleParser, DictParser
-# from pprint import pprint
+from functools import cache
+from pprint import pprint
 
-sample_input = """
+# Credit: https://www.reddit.com/user/4HbQ/ for solution
+
+sample_input1 = """
 aaa: you hhh
 you: bbb ccc
 bbb: ddd eee
@@ -15,26 +18,44 @@ hhh: ccc fff iii
 iii: out
 """
 
-def solve_part1(cables_dict):
-    def dfs(cable_name, path):
-        cables = cables_dict[cable_name]
-        total = 0
-        for conn in cables:
-            current_path = path + [cable_name]
-            if conn == "out":
-                full_path = current_path + [conn]
-                print("Found path:", " -> ".join(full_path))
-                total += 1
-                continue
-            total += dfs(conn, current_path)
-        return total
+sample_input2 = """
+svr: aaa bbb
+aaa: fft
+fft: ccc
+bbb: tty
+tty: ccc
+ccc: ddd eee
+ddd: hub
+hub: fff
+eee: dac
+dac: fff
+fff: ggg hhh
+ggg: out
+hhh: out
+"""
 
-    total_paths = dfs("you", [])
-    return total_paths
+cables = {}
+
+@cache
+def count(here, dest):
+    return here == dest or sum(count(next, dest) for next in cables[here])
+
+def solve_part1():
+    return count("you", "out")
+
+def solve_part2():
+    svr_dac_paths = count('svr', 'dac')
+    svr_fft_paths = count('svr', 'fft')
+    dac_fft_paths = count('dac', 'fft')
+    fft_dac_paths = count('fft', 'dac')
+    dac_out_paths = count('dac', 'out')
+    fft_out_paths = count('fft', 'out')
+    return svr_dac_paths * dac_fft_paths * fft_out_paths + svr_fft_paths * fft_dac_paths * dac_out_paths
 
 if __name__ == "__main__":
     raw_data = get_data(day=11, year=2025)
-    # raw_data = sample_input.strip()
+    # raw_data = sample_input1.strip()
+    # raw_data = sample_input2.strip()
 
     value_list_parser = ListParser(splitter=" ")
     parser = DictParser(
@@ -47,7 +68,11 @@ if __name__ == "__main__":
         splitter=":",
     )
 
-    cables = parser.parse(raw_data)
+    cables = parser.parse(raw_data) | {'out':[]}
     # pprint(cables)
 
-    submit(solve_part1(cables), part="a", day=11, year=2025)
+    # print("Part 1:", solve_part1())
+    # submit(solve_part1(), part="a", day=11, year=2025)
+
+    # print("Part 2:", solve_part2())
+    submit(solve_part2(), part="b", day=11, year=2025)
